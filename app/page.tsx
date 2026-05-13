@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
+import { useRouter } from "next/navigation";
 import ZoneEditor, { Zone } from "@/components/ZoneEditor";
 
 // ─── Types ────────────────────────────────────────────────
@@ -339,10 +340,10 @@ function ZoneResultsTable({ results }: { results: AnalysisResult }) {
   return (
     <div className="space-y-3">
       {results.zones.map((zone) => (
-        <div key={zone.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div key={zone.id} className="bg-white rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100">
             <ScoreRing score={zone.score} size={52}/>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-800">{zone.name}</h3>
               <p className="text-sm text-gray-500 mt-0.5">{zone.summary}</p>
             </div>
@@ -350,39 +351,62 @@ function ZoneResultsTable({ results }: { results: AnalysisResult }) {
               {zone.issues.length} hallazgo{zone.issues.length !== 1 ? "s" : ""}
             </span>
           </div>
+
           {zone.issues.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 text-left">
-                    {["Item", "Criticidad", "Esfuerzo", "Detalle", "Medida"].map((h, i) => (
-                      <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${i === 0 ? "w-[22%]" : i <= 2 ? "w-[11%]" : "w-[28%]"}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {zone.issues.map((issue, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 align-top">
-                        <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-md">{issue.heuristic}</span>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${SEVERITY_CLASS[issue.severity] || SEVERITY_CLASS[1]}`}>
-                          {SEVERITY_LABEL[issue.severity] || "Cosmético"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${EFFORT_CLASS[issue.effort] || "bg-gray-100 text-gray-600"}`}>
-                          {issue.effort}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-xs text-gray-700 leading-relaxed">{issue.description}</td>
-                      <td className="px-4 py-3 align-top text-xs text-gray-500 leading-relaxed">{issue.recommendation}</td>
+            <>
+              {/* Desktop: tabla */}
+              <div className="hidden sm:block overflow-x-auto rounded-b-2xl">
+                <table className="w-full text-sm min-w-[560px]">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      {["Item", "Criticidad", "Esfuerzo", "Detalle", "Medida"].map((h, i) => (
+                        <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${i === 0 ? "w-[22%]" : i <= 2 ? "w-[11%]" : "w-[28%]"}`}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {zone.issues.map((issue, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 align-top">
+                          <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-md">{issue.heuristic}</span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-md ${SEVERITY_CLASS[issue.severity] || SEVERITY_CLASS[1]}`}>
+                            {SEVERITY_LABEL[issue.severity] || "Cosmético"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-md ${EFFORT_CLASS[issue.effort] || "bg-gray-100 text-gray-600"}`}>
+                            {issue.effort}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-top text-xs text-gray-700 leading-relaxed">{issue.description}</td>
+                        <td className="px-4 py-3 align-top text-xs text-gray-500 leading-relaxed">{issue.recommendation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile: cards */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {zone.issues.map((issue, i) => (
+                  <div key={i} className="px-4 py-4 space-y-2">
+                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-md inline-block">{issue.heuristic}</span>
+                    <div className="flex gap-2">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-md ${SEVERITY_CLASS[issue.severity] || SEVERITY_CLASS[1]}`}>
+                        {SEVERITY_LABEL[issue.severity] || "Cosmético"}
+                      </span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-md ${EFFORT_CLASS[issue.effort] || "bg-gray-100 text-gray-600"}`}>
+                        {issue.effort}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed">{issue.description}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed border-l-2 border-gray-200 pl-2">{issue.recommendation}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       ))}
@@ -644,33 +668,62 @@ function CompareResults({ v1, v2, onBack }: { v1: EvalData; v2: EvalData; onBack
 // ─── SelectScreen ─────────────────────────────────────────
 
 function SelectScreen({ onSelect }: { onSelect: (mode: "individual" | "comparative") => void }) {
+  const router = useRouter();
   return (
     <div className="max-w-2xl mx-auto px-4 py-16">
       <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold text-gray-800">¿Qué tipo de evaluación quieres hacer?</h1>
-        <p className="text-gray-500 mt-2 text-sm">Selecciona el modo para comenzar</p>
+        <h1 className="text-2xl font-bold text-gray-800">¿Qué quieres evaluar?</h1>
+        <p className="text-gray-500 mt-2 text-sm">Elige el tipo de pantalla para comenzar</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button onClick={() => onSelect("individual")}
-          className="bg-white rounded-2xl border border-gray-200 p-6 text-left hover:border-[#1B3F8F] hover:shadow-md transition-all group">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-            <svg className="w-5 h-5 text-[#1B3F8F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <h3 className="font-semibold text-gray-800 mb-1">Evaluación individual</h3>
-          <p className="text-sm text-gray-500">Analiza una interfaz con las heurísticas de Nielsen y WCAG 2.1 AA</p>
-        </button>
 
-        <button onClick={() => onSelect("comparative")}
-          className="bg-white rounded-2xl border border-gray-200 p-6 text-left hover:border-[#1B3F8F] hover:shadow-md transition-all group">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-            <svg className="w-5 h-5 text-[#1B3F8F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
+      {/* Pantallas diseñadas */}
+      <div className="mb-8">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+          Pantallas diseñadas
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button onClick={() => onSelect("individual")}
+            className="bg-white rounded-2xl border border-gray-200 p-6 text-left hover:border-[#1B3F8F] hover:shadow-md transition-all group">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5 text-[#1B3F8F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-1">Evaluación individual</h3>
+            <p className="text-sm text-gray-500">Analiza una pantalla con heurísticas de Nielsen y WCAG 2.1 AA</p>
+          </button>
+
+          <button onClick={() => onSelect("comparative")}
+            className="bg-white rounded-2xl border border-gray-200 p-6 text-left hover:border-[#1B3F8F] hover:shadow-md transition-all group">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5 text-[#1B3F8F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <h3 className="font-semibold text-gray-800 mb-1">Evaluación comparativa</h3>
+            <p className="text-sm text-gray-500">Compara dos versiones y mide el impacto de los cambios</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Sitio existente */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+          Sitio existente en la web
+        </p>
+        <button onClick={() => router.push("/auto")}
+          className="w-full bg-white rounded-2xl border border-gray-200 p-6 text-left hover:border-[#1B3F8F] hover:shadow-md transition-all group">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
+              <svg className="w-5 h-5 text-[#1B3F8F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-1">Auditoría automática por URL</h3>
+              <p className="text-sm text-gray-500">Ingresa una URL y el agente captura, analiza accesibilidad, performance y contenido automáticamente</p>
+            </div>
           </div>
-          <h3 className="font-semibold text-gray-800 mb-1">Evaluación comparativa</h3>
-          <p className="text-sm text-gray-500">Compara dos versiones de una interfaz y mide el impacto de los cambios</p>
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,11 +15,13 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="min-h-screen bg-gray-50">
-        <header className="bg-[#0F2156] text-white px-6 py-4 flex items-center gap-3">
+        <header className="bg-[#0F2156] text-white px-6 py-4 flex items-center gap-6">
           <span className="text-xl font-bold tracking-tight">Audix</span>
-          <span className="text-[#6B9FD4] text-sm hidden sm:inline">
-            UX Audit Tool con IA
-          </span>
+          <nav className="flex gap-4 text-sm">
+            <Link href="/" className="text-[#6B9FD4] hover:text-white transition-colors">
+              Inicio
+            </Link>
+          </nav>
         </header>
         <main>{children}</main>
       </body>

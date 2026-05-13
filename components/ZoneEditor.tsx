@@ -145,6 +145,81 @@ export default function ZoneEditor({
     };
   }, []);
 
+  const getTouchCoords = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0] || e.changedTouches[0];
+    return {
+      x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+      y: (touch.clientY - rect.top) * (canvas.height / rect.height),
+    };
+  }, []);
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      if (pendingZone) return;
+      const { x, y } = getTouchCoords(e);
+      setIsDrawing(true);
+      setDrawStart({ x, y });
+      setCurrentRect({ x, y, w: 0, h: 0 });
+    },
+    [pendingZone, getTouchCoords]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      if (!isDrawing || !drawStart) return;
+      const { x, y } = getTouchCoords(e);
+      const rect = {
+        x: Math.min(drawStart.x, x),
+        y: Math.min(drawStart.y, y),
+        w: Math.abs(x - drawStart.x),
+        h: Math.abs(y - drawStart.y),
+      };
+      setCurrentRect(rect);
+      drawCanvas(zones, rect);
+    },
+    [isDrawing, drawStart, getTouchCoords, zones, drawCanvas]
+  );
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      if (!isDrawing || !drawStart) return;
+      setIsDrawing(false);
+      const { x, y } = getTouchCoords(e);
+      const rect = {
+        x: Math.min(drawStart.x, x),
+        y: Math.min(drawStart.y, y),
+        w: Math.abs(x - drawStart.x),
+        h: Math.abs(y - drawStart.y),
+      };
+      setCurrentRect(null);
+      setDrawStart(null);
+
+      if (rect.w < 20 || rect.h < 20) return;
+
+      setPendingZone(rect);
+      setNameInput("");
+
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
+        setNameInputPos({
+          left: rect.x * scaleX,
+          top: Math.max(4, rect.y * scaleY - 48),
+        });
+      }
+      setTimeout(() => nameInputRef.current?.focus(), 50);
+    },
+    [isDrawing, drawStart, getTouchCoords]
+  );
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (pendingZone) return;
@@ -291,10 +366,13 @@ export default function ZoneEditor({
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-full rounded-lg"
-          style={{ cursor: pendingZone ? "default" : "crosshair" }}
+          style={{ cursor: pendingZone ? "default" : "crosshair", touchAction: "none" }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         />
 
         {pendingZone && nameInputPos && (
@@ -330,7 +408,7 @@ export default function ZoneEditor({
       <div className="flex flex-wrap gap-2 items-center">
         <p className="text-xs text-gray-500">
           {zones.length === 0
-            ? "Dibuja zonas arrastrando sobre la imagen ↑"
+            ? "Dibuja zonas arrastrando sobre la imagen (mouse o dedo)"
             : `${zones.length} zona${zones.length !== 1 ? "s" : ""} definida${zones.length !== 1 ? "s" : ""}`}
         </p>
         {zones.map((zone, i) => (
