@@ -147,9 +147,21 @@ function SetupPanel({ title, subtitle, defaultVersion, zoneHints, onComplete, on
     setZones([]);
     setError(null);
     if (!file) { setImageBase64(""); return; }
+
+    const supported = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (file.type && !supported.includes(file.type)) {
+      setError("Formato no soportado. Usa PNG, JPG o WebP. En iPhone, desactiva \"Formato Alta Eficiencia\" en Configuración → Cámara.");
+      setImageFile(null);
+      return;
+    }
+
     setImageMime(file.type || "image/jpeg");
     const reader = new FileReader();
     reader.onload = (e) => setImageBase64((e.target?.result as string).split(",")[1]);
+    reader.onerror = () => {
+      setError("No se pudo leer el archivo. Intenta con una imagen en formato PNG o JPG.");
+      setImageFile(null);
+    };
     reader.readAsDataURL(file);
   }, []);
 
